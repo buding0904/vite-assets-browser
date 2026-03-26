@@ -6,7 +6,7 @@
 
 一个 Vite 开发插件，在开发时启动一个本地静态资源浏览器。在深色主题的网格界面中浏览项目中所有的图片、视频和字体文件 —— 棋盘格背景让 SVG 始终清晰可见。
 
-![截图占位](https://via.placeholder.com/800x450/1a1a1a/646cff?text=vite-assets-browser)
+![截图占位](demo.gif)
 
 ## 为什么需要它
 
