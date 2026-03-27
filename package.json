@@ -1,6 +1,6 @@
 {
   "name": "vite-assets-browser",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A Vite plugin that launches a local asset browser UI during development — browse images, videos, and fonts with a dark-themed grid interface",
   "type": "module",
   "main": "./dist/index.cjs",
