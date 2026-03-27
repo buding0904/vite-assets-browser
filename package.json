@@ -49,13 +49,20 @@
       "tagName": "v${version}"
     },
     "github": {
-      "release": true
+      "release": true,
+      "releaseNotes": "toJSON(changelog)"
     },
     "npm": {
       "publish": true
     },
     "hooks": {
       "before:init": "pnpm run build"
+    },
+    "plugins": {
+      "@release-it/conventional-changelog": {
+        "preset": "angular",
+        "infile": "CHANGELOG.md"
+      }
     }
   },
   "author": "buding0904",
@@ -67,6 +74,7 @@
     "fast-glob": "^3.3.2"
   },
   "devDependencies": {
+    "@release-it/conventional-changelog": "10.0.6",
     "@types/node": "25.5.0",
     "release-it-pnpm": "4.6.6",
     "tsup": "^8.0.0",
