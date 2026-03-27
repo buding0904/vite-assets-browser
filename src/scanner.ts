@@ -13,6 +13,7 @@ export interface Asset {
   ext: string
   type: AssetType
   size: number
+  directory: string
 }
 
 export type ChangeEvent =
@@ -65,13 +66,16 @@ function isIgnored(filePath: string, ignorePatterns: string[]): boolean {
 
 function makeAsset(filePath: string, root: string, size: number): Asset {
   const ext = path.extname(filePath).slice(1).toLowerCase()
+  const relativePath = path.relative(root, filePath)
+  const directory = path.dirname(relativePath)
   return {
     absolutePath: filePath,
-    relativePath: path.relative(root, filePath),
+    relativePath,
     filename: path.basename(filePath),
     ext,
     type: EXT_TYPE_MAP[ext] ?? 'image',
     size,
+    directory,
   }
 }
 

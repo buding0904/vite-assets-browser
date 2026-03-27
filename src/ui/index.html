@@ -345,6 +345,69 @@
   }
   .card-updated { animation: card-flash 0.8s ease forwards; }
 
+  /* Folder filter bar */
+  .folder-bar {
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .folder-bar::-webkit-scrollbar { height: 4px; }
+  .folder-bar::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+
+  .folder-chip {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 5px 12px;
+    white-space: nowrap;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .folder-chip:hover { border-color: var(--accent); }
+  .folder-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .folder-chip .folder-count {
+    opacity: 0.7;
+    font-size: 11px;
+  }
+
+  /* Group header */
+  .group-header {
+    grid-column: 1 / -1;
+    padding: 16px 0 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .group-header:hover { color: var(--accent); }
+  .group-header .folder-icon { opacity: 0.6; flex-shrink: 0; }
+  .group-header .group-count {
+    opacity: 0.45;
+    font-weight: 400;
+    font-size: 12px;
+    margin-left: 2px;
+  }
+  .group-chevron {
+    flex-shrink: 0;
+    opacity: 0.5;
+    transition: transform 0.2s ease;
+    margin-left: auto;
+  }
+  .group-header.collapsed .group-chevron { transform: rotate(-90deg); }
+  .card.group-collapsed { display: none !important; }
+
   /* Scrollbar */
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -381,6 +444,8 @@
   <span class="count" id="count"></span>
 </div>
 
+<div class="folder-bar" id="folder-bar"></div>
+
 <div class="grid-wrap">
   <div id="grid">
     <div class="loading">Loading assets…</div>
@@ -394,13 +459,17 @@
 
   let allAssets = []
   let filteredAssets = []
+  let groupedAssets = new Map()   // dir -> Asset[]
   let renderedCount = 0
   let activeType = 'all'
   let searchTerm = ''
+  let activeFolder = null
+  let collapsedFolders = new Set()
 
   const grid = document.getElementById('grid')
   const countEl = document.getElementById('count')
   const searchEl = document.getElementById('search')
+  const folderBar = document.getElementById('folder-bar')
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   async function loadAssets() {
@@ -413,16 +482,63 @@
     }
   }
 
+  // ── Folder bar ─────────────────────────────────────────────────────────────
+  function buildFolderBar() {
+    // Count assets per folder respecting type filter only (not folder filter)
+    const q = searchTerm.toLowerCase()
+    const typeFiltered = allAssets.filter(a => {
+      const typeMatch = activeType === 'all' || a.type === activeType
+      const nameMatch = !q || a.filename.toLowerCase().includes(q)
+      return typeMatch && nameMatch
+    })
+
+    const folderCounts = new Map()
+    for (const a of typeFiltered) {
+      const dir = a.directory || '.'
+      folderCounts.set(dir, (folderCounts.get(dir) || 0) + 1)
+    }
+
+    folderBar.innerHTML = ''
+    if (folderCounts.size <= 1) return
+
+    const allChip = document.createElement('button')
+    allChip.className = 'folder-chip' + (activeFolder === null ? ' active' : '')
+    allChip.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg> All folders <span class="folder-count">${typeFiltered.length}</span>`
+    allChip.addEventListener('click', () => { activeFolder = null; applyFilter() })
+    folderBar.appendChild(allChip)
+
+    const sorted = [...folderCounts.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+    for (const [dir, count] of sorted) {
+      const chip = document.createElement('button')
+      chip.className = 'folder-chip' + (activeFolder === dir ? ' active' : '')
+      chip.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> ${dir} <span class="folder-count">${count}</span>`
+      chip.dataset.tooltip = dir
+      chip.addEventListener('click', () => { activeFolder = dir; applyFilter() })
+      folderBar.appendChild(chip)
+    }
+  }
+
   // ── Filter ─────────────────────────────────────────────────────────────────
   function applyFilter() {
     const q = searchTerm.toLowerCase()
     filteredAssets = allAssets.filter(a => {
       const typeMatch = activeType === 'all' || a.type === activeType
       const nameMatch = !q || a.filename.toLowerCase().includes(q)
-      return typeMatch && nameMatch
+      const folderMatch = activeFolder === null || (a.directory || '.') === activeFolder
+      return typeMatch && nameMatch && folderMatch
     })
+
+    // Precompute group map (used by renderNextBatch for counts)
+    groupedAssets = new Map()
+    for (const a of filteredAssets) {
+      const dir = a.directory || '.'
+      if (!groupedAssets.has(dir)) groupedAssets.set(dir, [])
+      groupedAssets.get(dir).push(a)
+    }
+
     renderedCount = 0
     grid.innerHTML = ''
+    buildFolderBar()
     countEl.textContent = `${filteredAssets.length} asset${filteredAssets.length !== 1 ? 's' : ''}`
     if (filteredAssets.length === 0) {
       grid.innerHTML = `<div class="empty">
@@ -436,11 +552,62 @@
     renderNextBatch()
   }
 
-  // ── Render batch ───────────────────────────────────────────────────────────
+  // ── Render batch (grouped by directory) ────────────────────────────────────
   function renderNextBatch() {
     const slice = filteredAssets.slice(renderedCount, renderedCount + PAGE_SIZE)
-    slice.forEach(asset => grid.appendChild(createCard(asset)))
+    if (activeFolder !== null) {
+      // Single folder view — no group headers needed
+      slice.forEach(asset => grid.appendChild(createCard(asset)))
+    } else {
+      // Group by directory, only emit a header when the group changes
+      let lastDir = renderedCount === 0 ? null : (filteredAssets[renderedCount - 1]?.directory || '.')
+      for (const asset of slice) {
+        const dir = asset.directory || '.'
+        if (dir !== lastDir) {
+          const count = groupedAssets.get(dir)?.length ?? 0
+          grid.appendChild(createGroupHeader(dir, count))
+          lastDir = dir
+        }
+        const card = createCard(asset)
+        if (collapsedFolders.has(asset.directory || '.')) card.classList.add('group-collapsed')
+        grid.appendChild(card)
+      }
+    }
     renderedCount += slice.length
+  }
+
+  function createGroupHeader(dir, count) {
+    const el = document.createElement('div')
+    el.className = 'group-header' + (collapsedFolders.has(dir) ? ' collapsed' : '')
+    el.dataset.dir = dir
+    el.innerHTML = `
+      <svg class="folder-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+      </svg>
+      ${dir}
+      <span class="group-count">${count}</span>
+      <svg class="group-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="6 9 12 15 18 9"/>
+      </svg>
+    `
+    el.addEventListener('click', () => toggleGroup(dir))
+    return el
+  }
+
+  function toggleGroup(dir) {
+    const isCollapsed = collapsedFolders.has(dir)
+    if (isCollapsed) {
+      collapsedFolders.delete(dir)
+    } else {
+      collapsedFolders.add(dir)
+    }
+    // Update header chevron
+    const header = grid.querySelector(`.group-header[data-dir="${CSS.escape(dir)}"]`)
+    if (header) header.classList.toggle('collapsed', !isCollapsed)
+    // Show/hide cards
+    grid.querySelectorAll(`.card[data-dir="${CSS.escape(dir)}"]`).forEach(card => {
+      card.classList.toggle('group-collapsed', !isCollapsed)
+    })
   }
 
   // ── Card ───────────────────────────────────────────────────────────────────
@@ -448,6 +615,7 @@
     const card = document.createElement('div')
     card.className = 'card'
     card.dataset.path = asset.absolutePath
+    card.dataset.dir = asset.directory || '.'
 
     const fileUrl = `/file?path=${encodeURIComponent(asset.absolutePath)}`
     const importPath = buildImportPath(asset.relativePath)
@@ -669,21 +837,22 @@
   }
 
   function onAssetAdded(asset) {
-    // Update master list
     allAssets.unshift(asset)
+    buildFolderBar()
 
-    // Only touch the DOM if this asset passes the current filter
     if (!passesFilter(asset)) return
 
     filteredAssets.unshift(asset)
     updateCount()
 
-    // Prepend card to grid (remove empty state if present)
     const empty = grid.querySelector('.empty')
     if (empty) empty.remove()
 
     const card = createCard(asset)
     card.classList.add('card-new')
+    if (activeFolder === null && collapsedFolders.has(asset.directory || '.')) {
+      card.classList.add('group-collapsed')
+    }
     grid.prepend(card)
     renderedCount++
   }
@@ -691,9 +860,9 @@
   function onAssetRemoved(absolutePath) {
     allAssets = allAssets.filter(a => a.absolutePath !== absolutePath)
     filteredAssets = filteredAssets.filter(a => a.absolutePath !== absolutePath)
+    buildFolderBar()
     updateCount()
 
-    // Remove card from DOM if rendered
     const card = grid.querySelector(`[data-path="${CSS.escape(absolutePath)}"]`)
     if (card) {
       card.remove()
@@ -741,7 +910,8 @@
   function passesFilter(asset) {
     const typeMatch = activeType === 'all' || asset.type === activeType
     const nameMatch = !searchTerm || asset.filename.toLowerCase().includes(searchTerm.toLowerCase())
-    return typeMatch && nameMatch
+    const folderMatch = activeFolder === null || (asset.directory || '.') === activeFolder
+    return typeMatch && nameMatch && folderMatch
   }
 
   function updateCount() {
