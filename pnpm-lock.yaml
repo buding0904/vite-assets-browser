@@ -18,6 +18,9 @@ importers:
       '@types/node':
         specifier: 25.5.0
         version: 25.5.0
+      czg:
+        specifier: 1.12.0
+        version: 1.12.0
       release-it-pnpm:
         specifier: 4.6.6
         version: 4.6.6(release-it@19.2.4(@types/node@25.5.0))
@@ -948,6 +951,11 @@ packages:
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
     engines: {node: '>= 8'}
+
+  czg@1.12.0:
+    resolution: {integrity: sha512-LGltcoZ5m7vhe3WNw16QXqd5WurnHegx9V15MwZJtFAU2AVCYLCqDbwxPUgZOnAcdzzooq33ONcU148HOQsjdA==}
+    engines: {node: '>=v12.20.0'}
+    hasBin: true
 
   data-uri-to-buffer@6.0.2:
     resolution: {integrity: sha512-7hvf7/GW8e86rW0ptuwS3OcBGDjIi6SZva7hCyWC0yYry2cOPmLIjXAUHI6DK2HsnwJd9ifmt57i8eV2n4YNpw==}
@@ -2654,6 +2662,8 @@ snapshots:
       path-key: 3.1.1
       shebang-command: 2.0.0
       which: 2.0.2
+
+  czg@1.12.0: {}
 
   data-uri-to-buffer@6.0.2: {}
 

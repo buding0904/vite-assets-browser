@@ -23,6 +23,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
+    "commit": "czg",
     "release": "release-it",
     "prepublishOnly": "npm run build"
   },
@@ -43,28 +44,6 @@
   "bugs": {
     "url": "https://github.com/buding0904/vite-assets-browser/issues"
   },
-  "release-it": {
-    "git": {
-      "commitMessage": "chore: release v${version}",
-      "tagName": "v${version}"
-    },
-    "github": {
-      "release": true,
-      "releaseNotes": "toJSON(changelog)"
-    },
-    "npm": {
-      "publish": true
-    },
-    "hooks": {
-      "before:init": "pnpm run build"
-    },
-    "plugins": {
-      "@release-it/conventional-changelog": {
-        "preset": "angular",
-        "infile": "CHANGELOG.md"
-      }
-    }
-  },
   "author": "buding0904",
   "license": "MIT",
   "peerDependencies": {
@@ -76,6 +55,7 @@
   "devDependencies": {
     "@release-it/conventional-changelog": "10.0.6",
     "@types/node": "25.5.0",
+    "czg": "1.12.0",
     "release-it-pnpm": "4.6.6",
     "tsup": "^8.0.0",
     "typescript": "^5.4.0",
